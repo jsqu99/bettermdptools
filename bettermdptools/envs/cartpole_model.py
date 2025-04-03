@@ -15,9 +15,8 @@ class DiscretizedCartPole:
         self,
         position_bins,
         velocity_bins,
-        angular_velocity_bins,
-        angular_center_resolution,
-        angular_outer_resolution,
+        angle_bins,
+        angular_velocity_bins
     ):
         """
         Initializes the DiscretizedCartPole model.
@@ -26,8 +25,6 @@ class DiscretizedCartPole:
         - position_bins (int): Number of discrete bins for the cart's position.
         - velocity_bins (int): Number of discrete bins for the cart's velocity.
         - angular_velocity_bins (int): Number of discrete bins for the pole's angular velocity.
-        - angular_center_resolution (float): The resolution of angle bins near the center (around zero).
-        - angular_outer_resolution (float): The resolution of angle bins away from the center.
 
         Attributes:
         - state_space (int): Total number of discrete states in the environment.
@@ -37,6 +34,7 @@ class DiscretizedCartPole:
         """
         self.position_bins = position_bins
         self.velocity_bins = velocity_bins
+        self.angle_bins =  angle_bins
         self.angular_velocity_bins = angular_velocity_bins
         self.action_space = 2  # Left or Right
 
@@ -45,15 +43,6 @@ class DiscretizedCartPole:
         self.velocity_range = (-3, 3)
         self.angle_range = (-12 * np.pi / 180, 12 * np.pi / 180)
         self.angular_velocity_range = (-1.5, 1.5)
-        self.angular_center_resolution = angular_center_resolution
-        self.angular_outer_resolution = angular_outer_resolution
-
-        # Use adaptive binning for the pole angle
-        self.angle_bins = self.adaptive_angle_bins(
-            self.angle_range,
-            self.angular_center_resolution,
-            self.angular_outer_resolution,
-        )  # Adjust these values as needed
 
         self.state_space = np.prod(
             [
@@ -134,39 +123,6 @@ class DiscretizedCartPole:
                 ),
             )
         )
-
-    def adaptive_angle_bins(self, angle_range, center_resolution, outer_resolution):
-        """
-        Generates adaptive bins for the pole's angle to allow for finer resolution near the center and coarser
-        resolution farther away.
-
-        Parameters:
-        - angle_range (tuple): The minimum and maximum angles in radians.
-        - center_resolution (float): Bin width near zero angle for higher resolution.
-        - outer_resolution (float): Bin width away from zero for lower resolution.
-
-        Returns:
-        - np.array: An array of bin edges with adaptive spacing.
-        """
-        min_angle, max_angle = angle_range
-        # Generate finer bins around zero
-        center_bins = np.arange(
-            -center_resolution, center_resolution + 1e-6, center_resolution / 10
-        )
-        # Generate sparser bins outside the center region
-        left_bins = np.linspace(
-            min_angle,
-            -center_resolution,
-            num=int((center_resolution - min_angle) / outer_resolution) + 1,
-            endpoint=False,
-        )
-        right_bins = np.linspace(
-            center_resolution,
-            max_angle,
-            num=int((max_angle - center_resolution) / outer_resolution) + 1,
-            endpoint=True,
-        )
-        return np.unique(np.concatenate([left_bins, center_bins, right_bins]))
 
     def setup_transition_probabilities(self):
         """
