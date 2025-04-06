@@ -153,6 +153,7 @@ class RL:
             nA = self.env.action_space.n
         pi_track = []
         Q = np.zeros((nS, nA), dtype=np.float32)
+        visit_counts = np.zeros((nS, nA), dtype=np.int32)
         Q_track = np.zeros((n_episodes, nS, nA), dtype=np.float32)
         alphas = RL.decay_schedule(init_alpha, min_alpha, alpha_decay_ratio, n_episodes)
         epsilons = RL.decay_schedule(
@@ -163,6 +164,7 @@ class RL:
             self.callbacks.on_episode_begin(self)
             self.callbacks.on_episode(self, episode=e)
             state, info = self.env.reset()
+            #print(f"starting state {state}")
             done = False
             state = convert_state_obs(state)
             total_reward = 0
@@ -183,6 +185,7 @@ class RL:
                 td_target = reward + gamma * Q[next_state].max() * (not done)
                 td_error = td_target - Q[state][action]
                 Q[state][action] = Q[state][action] + alphas[e] * td_error
+                visit_counts[state][action] += 1
                 state = next_state
                 total_reward += reward
             rewards[e] = total_reward
@@ -194,7 +197,7 @@ class RL:
         V = np.max(Q, axis=1)
 
         pi = {s: a for s, a in enumerate(np.argmax(Q, axis=1))}
-        return Q, V, pi, Q_track, pi_track, rewards
+        return Q, V, pi, Q_track, pi_track, rewards, visit_counts
 
     def sarsa(
         self,
