@@ -11,23 +11,72 @@ import numpy as np
 
 
 class DiscretizedCartPole:
+    def transform_obs3(self, obs):
+        print(f"{obs=}")
+        return (
+            np.ravel_multi_index(
+                (
+                    np.digitize(
+                        obs[0], self.position_bin_edges[1:-1],
+                    ),
+                    np.digitize(
+                        obs[1], self.velocity_bin_edges[1:-1],
+                    ),
+                    np.digitize(
+                        obs[2], self.angle_bin_edges[1:-1],
+                    ),
+                    np.digitize(
+                        obs[3], self.angular_velocity_bin_edges[1:-1],
+                    )
+                ),
+                (
+                    len(self.position_bin_edges) - 1,
+                    len(self.velocity_bin_edges) - 1,
+                    len(self.angle_bin_edges) - 1,
+                    len(self.angular_velocity_bin_edges) - 1,
+                ),
+            )
+        )
+
     def __init__(
         self,
+<<<<<<< Updated upstream
         position_bins,
         velocity_bins,
         angular_velocity_bins,
         angular_center_resolution,
         angular_outer_resolution,
+||||||| Stash base
+        position_bins,
+        velocity_bins,
+        angle_bins,
+        angular_velocity_bins
+=======
+        position_bin_edges,
+        velocity_bin_edges,
+        angle_bin_edges,
+        angular_velocity_bin_edges
+>>>>>>> Stashed changes
     ):
         """
         Initializes the DiscretizedCartPole model.
 
         Parameters:
+<<<<<<< Updated upstream
         - position_bins (int): Number of discrete bins for the cart's position.
         - velocity_bins (int): Number of discrete bins for the cart's velocity.
         - angular_velocity_bins (int): Number of discrete bins for the pole's angular velocity.
         - angular_center_resolution (float): The resolution of angle bins near the center (around zero).
         - angular_outer_resolution (float): The resolution of angle bins away from the center.
+||||||| Stash base
+        - position_bins (int): Number of discrete bins for the cart's position.
+        - velocity_bins (int): Number of discrete bins for the cart's velocity.
+        - angular_velocity_bins (int): Number of discrete bins for the pole's angular velocity.
+=======
+        - position_bin_edges (int): Number of discrete bins for the cart's position.
+        - velocity_bin_edges (int): Number of discrete bins for the cart's velocity.
+        - angular_velocity_bin_edges (int): Number of discrete bins for the pole's angular velocity.
+>>>>>>> Stashed changes
 
         Attributes:
         - state_space (int): Total number of discrete states in the environment.
@@ -35,9 +84,21 @@ class DiscretizedCartPole:
         reward, done).
         - transform_obs (lambda): Function to transform continuous observations into a discrete state index.
         """
+<<<<<<< Updated upstream
         self.position_bins = position_bins
         self.velocity_bins = velocity_bins
         self.angular_velocity_bins = angular_velocity_bins
+||||||| Stash base
+        self.position_bins = position_bins
+        self.velocity_bins = velocity_bins
+        self.angle_bins =  angle_bins
+        self.angular_velocity_bins = angular_velocity_bins
+=======
+        self.position_bin_edges = position_bin_edges
+        self.velocity_bin_edges = velocity_bin_edges
+        self.angle_bin_edges =  angle_bin_edges
+        self.angular_velocity_bin_edges = angular_velocity_bin_edges
+>>>>>>> Stashed changes
         self.action_space = 2  # Left or Right
 
         # Define the range for each variable
@@ -57,10 +118,22 @@ class DiscretizedCartPole:
 
         self.state_space = np.prod(
             [
+<<<<<<< Updated upstream
                 self.position_bins,
                 self.velocity_bins,
                 len(self.angle_bins),
                 self.angular_velocity_bins,
+||||||| Stash base
+                len(self.position_bins),
+                len(self.velocity_bins),
+                len(self.angle_bins),
+                len(self.angular_velocity_bins),
+=======
+                len(self.position_bin_edges) - 1,
+                len(self.velocity_bin_edges) - 1,
+                len(self.angle_bin_edges) - 1,
+                len(self.angular_velocity_bin_edges) -  1,
+>>>>>>> Stashed changes
             ]
         )
         self.P = {
@@ -69,10 +142,22 @@ class DiscretizedCartPole:
         }
         self.setup_transition_probabilities()
         self.n_states = (
+<<<<<<< Updated upstream
             len(self.angle_bins)
             * self.velocity_bins
             * self.position_bins
             * self.angular_velocity_bins
+||||||| Stash base
+            len(self.angle_bins)
+            * len(self.velocity_bins)
+            * len(self.position_bins)
+            * len(self.angular_velocity_bins)
+=======
+                (len(self.angle_bin_edges) - 1)
+            * (len(self.velocity_bin_edges) - 1)
+            * (len(self.position_bin_edges) - 1)
+            * (len(self.angular_velocity_bin_edges) - 1)
+>>>>>>> Stashed changes
         )
         """
         Explanation of transform_obs lambda: 
@@ -87,6 +172,7 @@ class DiscretizedCartPole:
         Returns:
         - int: A single integer representing the discretized state index.
         """
+<<<<<<< Updated upstream
         self.transform_obs = lambda obs: (
             np.ravel_multi_index(
                 (
@@ -134,6 +220,56 @@ class DiscretizedCartPole:
                 ),
             )
         )
+||||||| Stash base
+        self.transform_obs = lambda obs: (
+            np.ravel_multi_index(
+                (
+                    np.clip(
+                        np.digitize(
+                            obs[0],
+                            self.position_bins,
+                        )
+                        - 1,
+                        0,
+                        len(self.position_bins) - 1,
+                    ),
+                    np.clip(
+                        np.digitize(
+                            obs[1],
+                            self.velocity_bins,
+                        )
+                        - 1,
+                        0,
+                        len(self.velocity_bins) - 1,
+                    ),
+                    np.clip(
+                        np.digitize(obs[2], self.angle_bins) - 1,
+                        0,
+                        len(self.angle_bins) - 1,
+                    ),
+                    # Use adaptive angle bins
+                    np.clip(
+                        np.digitize(
+                            obs[3],
+                                self.angular_velocity_bins
+                        )
+                        - 1,
+                        0,
+                        len(self.angular_velocity_bins) - 1,
+                    ),
+                ),
+                (
+                    len(self.position_bins),
+                    len(self.velocity_bins),
+                    len(self.angle_bins),
+                    len(self.angular_velocity_bins),
+                ),
+            )
+        )
+=======
+
+        self.transform_obs = self.transform_obs3
+>>>>>>> Stashed changes
 
     def adaptive_angle_bins(self, angle_range, center_resolution, outer_resolution):
         """
@@ -193,10 +329,22 @@ class DiscretizedCartPole:
         - list: A list of indices representing the state in terms of position, velocity, angle, and angular velocity bins.
         """
         totals = [
+<<<<<<< Updated upstream
             self.position_bins,
             self.velocity_bins,
             len(self.angle_bins),
             self.angular_velocity_bins,
+||||||| Stash base
+            len(self.position_bins),
+            len(self.velocity_bins),
+            len(self.angle_bins),
+            len(self.angular_velocity_bins),
+=======
+            len(self.position_bin_edges) - 1,
+            len(self.velocity_bin_edges) - 1,
+            len(self.angle_bin_edges) - 1,
+            len(self.angular_velocity_bin_edges) - 1,
+>>>>>>> Stashed changes
         ]
         multipliers = np.cumprod([1] + totals[::-1])[:-1][::-1]
         components = [int((index // multipliers[i]) % totals[i]) for i in range(4)]
@@ -218,12 +366,24 @@ class DiscretizedCartPole:
         Returns:
         - tuple: Contains the next state index, the reward, and the done flag indicating if the episode has ended.
         """
+<<<<<<< Updated upstream
         position = np.linspace(*self.position_range, self.position_bins)[position_idx]
         velocity = np.linspace(*self.velocity_range, self.velocity_bins)[velocity_idx]
         angle = self.angle_bins[angle_idx]
         angular_velocity = np.linspace(
             *self.angular_velocity_range, self.angular_velocity_bins
         )[angular_velocity_idx]
+||||||| Stash base
+        position =self.position_bins[position_idx]
+        velocity = self.velocity_bins[velocity_idx]
+        angle = self.angle_bins[angle_idx]
+        angular_velocity = self.angular_velocity_bins[angular_velocity_idx]
+=======
+        position =self.position_bin_edges[position_idx]
+        velocity = self.velocity_bin_edges[velocity_idx]
+        angle = self.angle_bin_edges[angle_idx]
+        angular_velocity = self.angular_velocity_bin_edges[angular_velocity_idx]
+>>>>>>> Stashed changes
 
         # Simulate physics here (simplified)
         force = 10 if action == 1 else -10
@@ -234,31 +394,67 @@ class DiscretizedCartPole:
 
         new_position_idx = np.clip(
             np.digitize(
+<<<<<<< Updated upstream
                 new_position, np.linspace(*self.position_range, self.position_bins)
+||||||| Stash base
+                new_position, self.position_bins
+=======
+                new_position, self.position_bin_edges
+>>>>>>> Stashed changes
             )
             - 1,
             0,
+<<<<<<< Updated upstream
             self.position_bins - 1,
+||||||| Stash base
+            len(self.position_bins) - 1,
+=======
+            len(self.position_bin_edges) - 1,
+>>>>>>> Stashed changes
         )
         new_velocity_idx = np.clip(
             np.digitize(
+<<<<<<< Updated upstream
                 new_velocity, np.linspace(*self.velocity_range, self.velocity_bins)
+||||||| Stash base
+                new_velocity, self.velocity_bins
+=======
+                new_velocity, self.velocity_bin_edges
+>>>>>>> Stashed changes
             )
             - 1,
             0,
+<<<<<<< Updated upstream
             self.velocity_bins - 1,
+||||||| Stash base
+            len(self.velocity_bins) - 1,
+=======
+            len(self.velocity_bin_edges) - 1,
+>>>>>>> Stashed changes
         )
         new_angle_idx = np.clip(
-            np.digitize(new_angle, self.angle_bins) - 1, 0, len(self.angle_bins) - 1
+            np.digitize(new_angle, self.angle_bin_edges) - 1, 0, len(self.angle_bin_edges) - 1
         )
         new_angular_velocity_idx = np.clip(
             np.digitize(
                 new_angular_velocity,
+<<<<<<< Updated upstream
                 np.linspace(*self.angular_velocity_range, self.angular_velocity_bins),
+||||||| Stash base
+                self.angular_velocity_bins,
+=======
+                self.angular_velocity_bin_edges,
+>>>>>>> Stashed changes
             )
             - 1,
             0,
+<<<<<<< Updated upstream
             self.angular_velocity_bins - 1,
+||||||| Stash base
+            len(self.angular_velocity_bins) - 1,
+=======
+            len(self.angular_velocity_bin_edges) - 1,
+>>>>>>> Stashed changes
         )
 
         new_state_idx = np.ravel_multi_index(
@@ -269,10 +465,22 @@ class DiscretizedCartPole:
                 new_angular_velocity_idx,
             ),
             (
+<<<<<<< Updated upstream
                 self.position_bins,
                 self.velocity_bins,
                 len(self.angle_bins),
                 self.angular_velocity_bins,
+||||||| Stash base
+                len(self.position_bins),
+                len(self.velocity_bins),
+                len(self.angle_bins),
+                len(self.angular_velocity_bins),
+=======
+                len(self.position_bin_edges) - 1,
+                len(self.velocity_bin_edges - 1),
+                len(self.angle_bin_edges - 1),
+                len(self.angular_velocity_bin_edges - 1),
+>>>>>>> Stashed changes
             ),
         )
 
