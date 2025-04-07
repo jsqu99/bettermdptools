@@ -161,7 +161,7 @@ class DiscretizedCartPole:
             )
 
         center_bins = np.arange(
-            -center_resolution, center_resolution + 1e-6, center_resolution / 10
+           - center_resolution, center_resolution + 1e-6, center_bin_size
         )
 
         # Generate sparser bins outside the center region by dividing the remaining range
