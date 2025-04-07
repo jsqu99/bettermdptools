@@ -84,6 +84,7 @@ class CartpoleWrapper(gym.Wrapper):
             angular_outer_resolution=angular_outer_resolution,
         )
         self._P = dpole.P
+        self.dpole = dpole
         self._transform_obs = dpole.transform_obs
         env = CustomTransformObservation(
             env, self._transform_obs, gym.spaces.Discrete(dpole.n_states)
