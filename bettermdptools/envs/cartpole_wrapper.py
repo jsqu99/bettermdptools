@@ -56,7 +56,8 @@ class CartpoleWrapper(gym.Wrapper):
         velocity_bins=10,
         angular_velocity_bins=10,
         angular_center_resolution=0.1,
-        angular_outer_resolution=0.5,
+        angular_outer_resolution=0.05,
+        num_angular_center_bins=10,
     ):
         """
         Cartpole wrapper that modifies the observation space and creates a transition/reward matrix P.
@@ -82,6 +83,7 @@ class CartpoleWrapper(gym.Wrapper):
             angular_velocity_bins=angular_velocity_bins,
             angular_center_resolution=angular_center_resolution,
             angular_outer_resolution=angular_outer_resolution,
+            num_angular_center_bins=num_angular_center_bins,
         )
         self._P = dpole.P
         self.dpole = dpole

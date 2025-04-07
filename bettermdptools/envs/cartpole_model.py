@@ -8,6 +8,7 @@ dpole = DiscretizedCartPole(10, 10, 10, .1, .5)  # Example bin sizes for each va
 """
 
 import numpy as np
+import warnings
 
 
 class DiscretizedCartPole:
@@ -18,6 +19,7 @@ class DiscretizedCartPole:
         angular_velocity_bins,
         angular_center_resolution,
         angular_outer_resolution,
+        num_angular_center_bins=10,
     ):
         """
         Initializes the DiscretizedCartPole model.
@@ -47,12 +49,14 @@ class DiscretizedCartPole:
         self.angular_velocity_range = (-1.5, 1.5)
         self.angular_center_resolution = angular_center_resolution
         self.angular_outer_resolution = angular_outer_resolution
+        self.num_angular_center_bins = num_angular_center_bins
 
         # Use adaptive binning for the pole angle
         self.angle_bins = self.adaptive_angle_bins(
             self.angle_range,
             self.angular_center_resolution,
             self.angular_outer_resolution,
+            num_angular_center_bins=self.num_angular_center_bins,
         )  # Adjust these values as needed
 
         self.state_space = np.prod(
@@ -75,12 +79,12 @@ class DiscretizedCartPole:
             * self.angular_velocity_bins
         )
         """
-        Explanation of transform_obs lambda: 
-        This lambda function will take cartpole observations, determine which bins they fall into, 
-        and then convert bin coordinates into a single index.  This makes it possible 
-        to use traditional reinforcement learning and planning algorithms, designed for discrete spaces, with continuous 
-        state space environments. 
-        
+        Explanation of transform_obs lambda:
+        This lambda function will take cartpole observations, determine which bins they fall into,
+        and then convert bin coordinates into a single index.  This makes it possible
+        to use traditional reinforcement learning and planning algorithms, designed for discrete spaces, with continuous
+        state space environments.
+
         Parameters:
         - obs (list): A list of continuous observations [position, velocity, angle, angular_velocity].
 
@@ -135,7 +139,7 @@ class DiscretizedCartPole:
             )
         )
 
-    def adaptive_angle_bins(self, angle_range, center_resolution, outer_resolution):
+    def adaptive_angle_bins(self, angle_range, center_resolution, outer_resolution, num_angular_center_bins=10):
         """
         Generates adaptive bins for the pole's angle to allow for finer resolution near the center and coarser
         resolution farther away.
@@ -150,23 +154,45 @@ class DiscretizedCartPole:
         """
         min_angle, max_angle = angle_range
         # Generate finer bins around zero
+        center_bin_size = center_resolution / num_angular_center_bins
+        if center_bin_size >= outer_resolution:
+            warnings.warn(
+                f"Center bin size will be {center_bin_size} vs outer bin size of {outer_resolution}."
+            )
+
         center_bins = np.arange(
             -center_resolution, center_resolution + 1e-6, center_resolution / 10
         )
-        # Generate sparser bins outside the center region
+
+        # Generate sparser bins outside the center region by dividing the remaining range
+        # into bins of size `outer_resolution`
+        left_distance = np.abs(np.abs(min_angle) - np.abs(center_resolution))
         left_bins = np.linspace(
             min_angle,
             -center_resolution,
-            num=int((center_resolution - min_angle) / outer_resolution) + 1,
-            endpoint=False,
+            num=int(left_distance / outer_resolution) + 1,
+            endpoint=True,
         )
+        print(f"{left_bins=}")
+        right_distance = np.abs(np.abs(max_angle) - np.abs(center_resolution))
         right_bins = np.linspace(
             center_resolution,
             max_angle,
-            num=int((max_angle - center_resolution) / outer_resolution) + 1,
+            num=int(right_distance / outer_resolution) + 1,
             endpoint=True,
         )
-        return np.unique(np.concatenate([left_bins, center_bins, right_bins]))
+        print(f"{center_bins=}")
+        print(f"{right_bins=}")
+        rounded_l = np.round(left_bins, decimals=2)
+        print(f"{rounded_l=}")
+        rounded_c = np.round(center_bins, decimals=2)
+        print(f"{rounded_c=}")
+        rounded_r = np.round(right_bins, decimals=2)
+        print(f"{rounded_r=}")
+
+        print(f"{right_bins.dtype=}, {rounded_r.dtype=}")
+
+        return np.unique(np.concatenate((rounded_l, rounded_c, rounded_r)))
 
     def setup_transition_probabilities(self):
         """
