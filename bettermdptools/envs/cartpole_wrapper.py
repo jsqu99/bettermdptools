@@ -52,7 +52,11 @@ class CartpoleWrapper(gym.Wrapper):
     def __init__(
         self,
         env,
-        dpole
+        position_bins=10,
+        velocity_bins=10,
+        angular_velocity_bins=10,
+        angular_center_resolution=0.1,
+        angular_outer_resolution=0.5,
     ):
         """
         Cartpole wrapper that modifies the observation space and creates a transition/reward matrix P.
@@ -61,9 +65,24 @@ class CartpoleWrapper(gym.Wrapper):
         ----------
         env : gymnasium.Env
             Base environment.
-        dpole: DiscretizedCartPole
+        position_bins : int, optional
+            Number of discrete bins for the cart's position.
+        velocity_bins : int, optional
+            Number of discrete bins for the cart's velocity.
+        angular_velocity_bins : int, optional
+            Number of discrete bins for the pole's angular velocity.
+        angular_center_resolution : float, optional
+            The resolution of angle bins near the center (around zero).
+        angular_outer_resolution : float, optional
+            The resolution of angle bins away from the center.
         """
-        self.dpole = dpole
+        dpole = DiscretizedCartPole(
+            position_bins=position_bins,
+            velocity_bins=velocity_bins,
+            angular_velocity_bins=angular_velocity_bins,
+            angular_center_resolution=angular_center_resolution,
+            angular_outer_resolution=angular_outer_resolution,
+        )
         self._P = dpole.P
         self._transform_obs = dpole.transform_obs
         env = CustomTransformObservation(

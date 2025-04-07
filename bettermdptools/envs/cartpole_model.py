@@ -15,8 +15,9 @@ class DiscretizedCartPole:
         self,
         position_bins,
         velocity_bins,
-        angle_bins,
-        angular_velocity_bins
+        angular_velocity_bins,
+        angular_center_resolution,
+        angular_outer_resolution,
     ):
         """
         Initializes the DiscretizedCartPole model.
@@ -25,6 +26,8 @@ class DiscretizedCartPole:
         - position_bins (int): Number of discrete bins for the cart's position.
         - velocity_bins (int): Number of discrete bins for the cart's velocity.
         - angular_velocity_bins (int): Number of discrete bins for the pole's angular velocity.
+        - angular_center_resolution (float): The resolution of angle bins near the center (around zero).
+        - angular_outer_resolution (float): The resolution of angle bins away from the center.
 
         Attributes:
         - state_space (int): Total number of discrete states in the environment.
@@ -34,23 +37,30 @@ class DiscretizedCartPole:
         """
         self.position_bins = position_bins
         self.velocity_bins = velocity_bins
-        self.angle_bins =  angle_bins
         self.angular_velocity_bins = angular_velocity_bins
         self.action_space = 2  # Left or Right
 
         # Define the range for each variable
-        """
         self.position_range = (-2.4, 2.4)
         self.velocity_range = (-3, 3)
         self.angle_range = (-12 * np.pi / 180, 12 * np.pi / 180)
         self.angular_velocity_range = (-1.5, 1.5)
-        """
+        self.angular_center_resolution = angular_center_resolution
+        self.angular_outer_resolution = angular_outer_resolution
+
+        # Use adaptive binning for the pole angle
+        self.angle_bins = self.adaptive_angle_bins(
+            self.angle_range,
+            self.angular_center_resolution,
+            self.angular_outer_resolution,
+        )  # Adjust these values as needed
+
         self.state_space = np.prod(
             [
-                len(self.position_bins),
-                len(self.velocity_bins),
+                self.position_bins,
+                self.velocity_bins,
                 len(self.angle_bins),
-                len(self.angular_velocity_bins),
+                self.angular_velocity_bins,
             ]
         )
         self.P = {
@@ -60,9 +70,9 @@ class DiscretizedCartPole:
         self.setup_transition_probabilities()
         self.n_states = (
             len(self.angle_bins)
-            * len(self.velocity_bins)
-            * len(self.position_bins)
-            * len(self.angular_velocity_bins)
+            * self.velocity_bins
+            * self.position_bins
+            * self.angular_velocity_bins
         )
         """
         Explanation of transform_obs lambda: 
@@ -83,20 +93,20 @@ class DiscretizedCartPole:
                     np.clip(
                         np.digitize(
                             obs[0],
-                            self.position_bins,
+                            np.linspace(*self.position_range, self.position_bins),
                         )
                         - 1,
                         0,
-                        len(self.position_bins) - 1,
+                        self.position_bins - 1,
                     ),
                     np.clip(
                         np.digitize(
                             obs[1],
-                            self.velocity_bins,
+                            np.linspace(*self.velocity_range, self.velocity_bins),
                         )
                         - 1,
                         0,
-                        len(self.velocity_bins) - 1,
+                        self.velocity_bins - 1,
                     ),
                     np.clip(
                         np.digitize(obs[2], self.angle_bins) - 1,
@@ -107,21 +117,56 @@ class DiscretizedCartPole:
                     np.clip(
                         np.digitize(
                             obs[3],
-                                self.angular_velocity_bins
+                            np.linspace(
+                                *self.angular_velocity_range, self.angular_velocity_bins
+                            ),
                         )
                         - 1,
                         0,
-                        len(self.angular_velocity_bins) - 1,
+                        self.angular_velocity_bins - 1,
                     ),
                 ),
                 (
-                    len(self.position_bins),
-                    len(self.velocity_bins),
+                    self.position_bins,
+                    self.velocity_bins,
                     len(self.angle_bins),
-                    len(self.angular_velocity_bins),
+                    self.angular_velocity_bins,
                 ),
             )
         )
+
+    def adaptive_angle_bins(self, angle_range, center_resolution, outer_resolution):
+        """
+        Generates adaptive bins for the pole's angle to allow for finer resolution near the center and coarser
+        resolution farther away.
+
+        Parameters:
+        - angle_range (tuple): The minimum and maximum angles in radians.
+        - center_resolution (float): Bin width near zero angle for higher resolution.
+        - outer_resolution (float): Bin width away from zero for lower resolution.
+
+        Returns:
+        - np.array: An array of bin edges with adaptive spacing.
+        """
+        min_angle, max_angle = angle_range
+        # Generate finer bins around zero
+        center_bins = np.arange(
+            -center_resolution, center_resolution + 1e-6, center_resolution / 10
+        )
+        # Generate sparser bins outside the center region
+        left_bins = np.linspace(
+            min_angle,
+            -center_resolution,
+            num=int((center_resolution - min_angle) / outer_resolution) + 1,
+            endpoint=False,
+        )
+        right_bins = np.linspace(
+            center_resolution,
+            max_angle,
+            num=int((max_angle - center_resolution) / outer_resolution) + 1,
+            endpoint=True,
+        )
+        return np.unique(np.concatenate([left_bins, center_bins, right_bins]))
 
     def setup_transition_probabilities(self):
         """
@@ -148,10 +193,10 @@ class DiscretizedCartPole:
         - list: A list of indices representing the state in terms of position, velocity, angle, and angular velocity bins.
         """
         totals = [
-            len(self.position_bins),
-            len(self.velocity_bins),
+            self.position_bins,
+            self.velocity_bins,
             len(self.angle_bins),
-            len(self.angular_velocity_bins),
+            self.angular_velocity_bins,
         ]
         multipliers = np.cumprod([1] + totals[::-1])[:-1][::-1]
         components = [int((index // multipliers[i]) % totals[i]) for i in range(4)]
@@ -173,10 +218,12 @@ class DiscretizedCartPole:
         Returns:
         - tuple: Contains the next state index, the reward, and the done flag indicating if the episode has ended.
         """
-        position =self.position_bins[position_idx]
-        velocity = self.velocity_bins[velocity_idx]
+        position = np.linspace(*self.position_range, self.position_bins)[position_idx]
+        velocity = np.linspace(*self.velocity_range, self.velocity_bins)[velocity_idx]
         angle = self.angle_bins[angle_idx]
-        angular_velocity = self.angular_velocity_bins[angular_velocity_idx]
+        angular_velocity = np.linspace(
+            *self.angular_velocity_range, self.angular_velocity_bins
+        )[angular_velocity_idx]
 
         # Simulate physics here (simplified)
         force = 10 if action == 1 else -10
@@ -187,19 +234,19 @@ class DiscretizedCartPole:
 
         new_position_idx = np.clip(
             np.digitize(
-                new_position, self.position_bins
+                new_position, np.linspace(*self.position_range, self.position_bins)
             )
             - 1,
             0,
-            len(self.position_bins) - 1,
+            self.position_bins - 1,
         )
         new_velocity_idx = np.clip(
             np.digitize(
-                new_velocity, self.velocity_bins
+                new_velocity, np.linspace(*self.velocity_range, self.velocity_bins)
             )
             - 1,
             0,
-            len(self.velocity_bins) - 1,
+            self.velocity_bins - 1,
         )
         new_angle_idx = np.clip(
             np.digitize(new_angle, self.angle_bins) - 1, 0, len(self.angle_bins) - 1
@@ -207,11 +254,11 @@ class DiscretizedCartPole:
         new_angular_velocity_idx = np.clip(
             np.digitize(
                 new_angular_velocity,
-                self.angular_velocity_bins,
+                np.linspace(*self.angular_velocity_range, self.angular_velocity_bins),
             )
             - 1,
             0,
-            len(self.angular_velocity_bins) - 1,
+            self.angular_velocity_bins - 1,
         )
 
         new_state_idx = np.ravel_multi_index(
@@ -222,10 +269,10 @@ class DiscretizedCartPole:
                 new_angular_velocity_idx,
             ),
             (
-                len(self.position_bins),
-                len(self.velocity_bins),
+                self.position_bins,
+                self.velocity_bins,
                 len(self.angle_bins),
-                len(self.angular_velocity_bins),
+                self.angular_velocity_bins,
             ),
         )
 
