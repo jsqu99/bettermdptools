@@ -73,6 +73,10 @@ class Planner:
                 for a in range(len(self.P[s])):
                     for prob, next_state, reward, done in self.P[s][a]:
                         Q[s][a] += prob * (reward + gamma * V[next_state] * (not done))
+            if ((i-1) % 20) == 0:
+                print("VI Iteration {}/{}".format(i + 1, n_iters))
+                print(f"{np.max(np.abs(V - np.max(Q, axis=1)))=}")
+
             if np.max(np.abs(V - np.max(Q, axis=1))) < theta:
                 converged = True
             V = np.max(Q, axis=1)
@@ -199,6 +203,8 @@ class Planner:
             V = self.policy_evaluation(pi, V, gamma=gamma, theta=theta, dtype=dtype)
             V_track[i] = V
             pi = self.policy_improvement(V, gamma=gamma, dtype=dtype)
+            if ((i - 1) % 20) == 0:
+                print("PI Iteration {}/{}".format(i + 1, n_iters))
             if old_pi == pi:
                 converged = True
 

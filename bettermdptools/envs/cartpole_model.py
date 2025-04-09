@@ -173,7 +173,6 @@ class DiscretizedCartPole:
             num=int(left_distance / outer_resolution) + 1,
             endpoint=True,
         )
-        print(f"{left_bins=}")
         right_distance = np.abs(np.abs(max_angle) - np.abs(center_resolution))
         right_bins = np.linspace(
             center_resolution,
@@ -181,16 +180,9 @@ class DiscretizedCartPole:
             num=int(right_distance / outer_resolution) + 1,
             endpoint=True,
         )
-        print(f"{center_bins=}")
-        print(f"{right_bins=}")
         rounded_l = np.round(left_bins, decimals=2)
-        print(f"{rounded_l=}")
         rounded_c = np.round(center_bins, decimals=2)
-        print(f"{rounded_c=}")
         rounded_r = np.round(right_bins, decimals=2)
-        print(f"{rounded_r=}")
-
-        print(f"{right_bins.dtype=}, {rounded_r.dtype=}")
 
         return np.unique(np.concatenate((rounded_l, rounded_c, rounded_r)))
 

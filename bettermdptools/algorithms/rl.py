@@ -31,9 +31,9 @@ from bettermdptools.utils.callbacks import MyCallbacks
 
 
 class RL:
-    def __init__(self, env):
+    def __init__(self, env, callbacks=MyCallbacks()):
         self.env = env
-        self.callbacks = MyCallbacks()
+        self.callbacks = callbacks
         self.render = False
         # Explanation of lambda:
         # def select_action(state, Q, epsilon):
@@ -155,6 +155,7 @@ class RL:
         Q = np.zeros((nS, nA), dtype=np.float32)
         visit_counts = np.zeros((nS, nA), dtype=np.int32)
         Q_track = np.zeros((n_episodes, nS, nA), dtype=np.float32)
+        V_track = np.zeros((n_episodes, nS), dtype=np.float32)
         alphas = RL.decay_schedule(init_alpha, min_alpha, alpha_decay_ratio, n_episodes)
         epsilons = RL.decay_schedule(
             init_epsilon, min_epsilon, epsilon_decay_ratio, n_episodes
@@ -177,8 +178,10 @@ class RL:
                 next_state, reward, terminated, truncated, _ = self.env.step(action)
                 if truncated:
                     warnings.warn(
-                        "Episode was truncated.  TD target value may be incorrect."
+                        "QL Episode was truncated.  TD target value may be incorrect."
                     )
+                    #print(f"{e=}, {next_state=}: {reward=}")
+
                 done = terminated or truncated
                 self.callbacks.on_env_step(self)
                 next_state = convert_state_obs(next_state)
@@ -186,10 +189,13 @@ class RL:
                 td_error = td_target - Q[state][action]
                 Q[state][action] = Q[state][action] + alphas[e] * td_error
                 visit_counts[state][action] += 1
+                #if ((i - 1) % 20) == 0:
+                #    print("VI Iteration {}/{}".format(i + 1, n_iters))
                 state = next_state
                 total_reward += reward
             rewards[e] = total_reward
             Q_track[e] = Q
+            V_track[e] = np.max(Q, axis=1)
             pi_track.append(np.argmax(Q, axis=1))
             self.render = False
             self.callbacks.on_episode_end(self)
@@ -197,7 +203,7 @@ class RL:
         V = np.max(Q, axis=1)
 
         pi = {s: a for s, a in enumerate(np.argmax(Q, axis=1))}
-        return Q, V, pi, Q_track, pi_track, rewards, visit_counts
+        return Q, V, pi, Q_track, pi_track, rewards, visit_counts, V_track
 
     def sarsa(
         self,
@@ -263,7 +269,9 @@ class RL:
             nA = self.env.action_space.n
         pi_track = []
         Q = np.zeros((nS, nA), dtype=np.float32)
+        visit_counts = np.zeros((nS, nA), dtype=np.int32)
         Q_track = np.zeros((n_episodes, nS, nA), dtype=np.float32)
+        V_track = np.zeros((n_episodes, nS), dtype=np.float32)
         rewards = np.zeros(n_episodes, dtype=np.float32)
         alphas = RL.decay_schedule(init_alpha, min_alpha, alpha_decay_ratio, n_episodes)
         epsilons = RL.decay_schedule(
@@ -295,10 +303,12 @@ class RL:
                 td_target = reward + gamma * Q[next_state][next_action] * (not done)
                 td_error = td_target - Q[state][action]
                 Q[state][action] = Q[state][action] + alphas[e] * td_error
+                visit_counts[state][action] += 1
                 state, action = next_state, next_action
                 total_reward += reward
             rewards[e] = total_reward
             Q_track[e] = Q
+            V_track[e] = np.max(Q, axis=1)
             pi_track.append(np.argmax(Q, axis=1))
             self.render = False
             self.callbacks.on_episode_end(self)
@@ -306,4 +316,4 @@ class RL:
         V = np.max(Q, axis=1)
 
         pi = {s: a for s, a in enumerate(np.argmax(Q, axis=1))}
-        return Q, V, pi, Q_track, pi_track, rewards
+        return Q, V, pi, Q_track, pi_track, rewards, visit_counts, V_track
